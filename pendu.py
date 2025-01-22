@@ -1,4 +1,7 @@
 import random
+import pygame
+
+pygame.mixer.init()
 
 def title():
     print("WELCOME TO HANGMAN!")
@@ -30,9 +33,9 @@ def choose_difficulty():
     print("3. Hardcore Henry")
     print("4. Ultraviolence")
     choice = input("Choose a difficulty: ")
-    attempts = 0
+    attempts = 0 # Guesses
     if choice == "1":
-        attempts = 10 # Maximum guesses
+        attempts = 10
         difficulty = "Kindergarten"
     elif choice == "2":
         attempts = 7
@@ -87,10 +90,16 @@ def new_game():
             print("Current word:", " ".join(underscore_rand_word))
 
     if "_" not in underscore_rand_word:
+        sound = pygame.mixer.Sound("denis_ah.mp3")
         print("Congratulations! You guessed the word!")
+        sound.play()
+        print("Score saved !")
+
         scores_saves(player_name,attempts, difficulty)
     else:
+        sound = pygame.mixer.Sound("motus_boule_noire.mp3")
         hangman()
+        sound.play()
         print(f"Out of attempts! The word was: {rand_word}")
 
 def scores_saves(player_name, points, difficulty):
