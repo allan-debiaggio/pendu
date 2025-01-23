@@ -4,10 +4,14 @@ import pygame
 pygame.mixer.init()
 
 def title():
-    print("WELCOME TO HANGMAN!")
-    player_name = input("Give me your name, please: ")
-    print(f"Okay {player_name}, let's go!")
-    return player_name
+    try :
+        print("WELCOME TO HANGMAN!")
+        player_name = input("Give me your name, please: ")
+        print(f"Okay {player_name}, let's go!")
+        return player_name
+    except KeyboardInterrupt :
+        print("\nQuitting the game...")
+        quit()
 
 def menu():
     print("***MENU***")
@@ -28,27 +32,29 @@ def menu():
         print("I didn't understand your request.")
 
 def choose_difficulty():
-    print("1. Kindergarten")
-    print("2. Average Joe")
-    print("3. Hardcore Henry")
-    print("4. Ultraviolence")
-    choice = input("Choose a difficulty: ")
-    attempts = 0 # Guesses
-    if choice == "1":
-        attempts = 10
-        difficulty = "Kindergarten"
-    elif choice == "2":
-        attempts = 7
-        difficulty = "Average Joe"
-    elif choice == "3":
-        attempts = 5
-        difficulty = "Hardcore Henry"
-    elif choice == "4":
-        attempts = 3
-        difficulty = "Ultraviolence"
-    else:
-        print("I did not understand your request.")
-    return attempts, difficulty
+    while True :
+        try :
+            print("1. Kindergarten")
+            print("2. Average Joe")
+            print("3. Hardcore Henry")
+            print("4. Ultraviolence")
+            choice = input("Choose a difficulty: ")
+            attempts = 0 # Guesses
+            if choice == "1":
+                attempts = 10
+                difficulty = "Kindergarten"
+            elif choice == "2":
+                attempts = 7
+                difficulty = "Average Joe"
+            elif choice == "3":
+                attempts = 5
+                difficulty = "Hardcore Henry"
+            elif choice == "4":
+                attempts = 3
+                difficulty = "Ultraviolence"
+            return attempts, difficulty
+        except (TypeError,UnboundLocalError) : 
+            print("Erhm, you can't do that, Billy.")
 
 def enter_word():
     word = input("What word do you want to add to the game? ").strip().lower()
@@ -72,13 +78,21 @@ def new_game():
     while attempts > 0 and "_" in underscore_rand_word:
         print(f"\nAttempts left: {attempts}")
         letter = input("Enter a letter to guess: ").strip().lower()
-        if len(letter) != 1:
+        if letter == rand_word :
+            print("WHAT A GUESS !!! CORRECT !!!")
+            sound = pygame.mixer.Sound("denis_ah.mp3")
+            print("Congratulations! You guessed the word!")
+            sound.play()
+            scores_saves(player_name,attempts, difficulty)
+            return
+            
+        elif len(letter) != 1:
             print("This is not one letter!")
         elif letter in guessed_letters:
             print("You've already guessed this letter!")
         else:
             guessed_letters.add(letter)
-            if letter in rand_word:
+            if letter in rand_word or letter == rand_word:
                 print("Correct guess!")
                 for i, char in enumerate(rand_word):
                     if char == letter:
@@ -93,8 +107,6 @@ def new_game():
         sound = pygame.mixer.Sound("denis_ah.mp3")
         print("Congratulations! You guessed the word!")
         sound.play()
-        print("Score saved !")
-
         scores_saves(player_name,attempts, difficulty)
     else:
         sound = pygame.mixer.Sound("motus_boule_noire.mp3")
@@ -144,5 +156,5 @@ while True :
     try :
         menu()
     except KeyboardInterrupt :
-        print("Quitting the game... ")
+        print("\nQuitting the game... ")
         break
