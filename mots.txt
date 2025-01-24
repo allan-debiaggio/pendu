@@ -1,0 +1,18 @@
+amour
+peur
+triste
+tableau
+table
+porte
+vice
+jolie
+prise
+ordinateur
+chargeur
+professeur
+verre
+voiture
+baffe
+scooteur& C:/Users/balqi/AppData/Local/Programs/Python/Python313/python.exe c:/Users/balqi/Desktop/plateforme/logiciel/projets-groupes/le-pendu-grp/index.py
+& C:/Users/balqi/AppData/Local/Programs/Python/Python313/python.exe c:/Users/balqi/Desktop/plateforme/logiciel/projets-groupes/le-pendu-grp/index.py
+3
