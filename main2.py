@@ -1,48 +1,32 @@
-import random
 import pygame
-import requests
-import json
+import random
 import os
+import json
+import requests
 
-pygame.mixer.init()
+# Initialisation de Pygame
+pygame.init()
 
-JSON_FILE_PATH = 'words.json'
+# Définition des constantes
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+FONT = pygame.font.Font(None, 36)
 
-API_URLS = [
+JSON_FILE_PATH = 'words.json' # PATH WORDS JSON
+SCORES_FILE_PATH = 'scores.txt' # scores for leaderboard
+ASSETS_PATH = 'assets/win.png' 
+
+API_URLS = [ #API for words
     "https://trouve-mot.fr/api/categorie/6",
     "https://trouve-mot.fr/api/categorie/19",
     "https://trouve-mot.fr/api/categorie/16",
     "https://trouve-mot.fr/api/categorie/17",
     "https://trouve-mot.fr/api/categorie/5",
 ]
-
-def title():
-    try:
-        print("WELCOME TO HANGMAN!")
-        player_name = input("Give me your name, please: ")
-        print(f"Okay {player_name}, let's go!")
-        return player_name
-    except KeyboardInterrupt:
-        print("\nQuitting the game...")
-        quit()
-
-def menu():
-    print("***MENU***")
-    print("1. New Game")
-    print("2. Change name")
-    print("3. Add word")
-    print("4. Leaderboards")
-    choice = input("Choose your option: ")
-    if choice == "1":
-        new_game()
-    elif choice == "2":
-        title()
-    elif choice == "3":
-        enter_word()
-    elif choice == "4":
-        leaderboards_menu()
-    else:
-        print("I didn't understand your request.")
 
 def load_words():
     words = []
@@ -68,147 +52,207 @@ def load_words():
 
     return words
 
-def get_random_word(words):
-    if words:
-        return random.choice(words)
-    print("No words available.")
-    return None
+def save_score(player_name, attempts_left, difficulty): # Save score in file
+    with open(SCORES_FILE_PATH, 'a') as file:
+        file.write(f"{player_name} {attempts_left} {difficulty}\n")
 
-def choose_difficulty():
-    while True:
-        try:
-            print("1. Kindergarten")
-            print("2. Average Joe")
-            print("3. Hardcore Henry")
-            print("4. Ultraviolence")
-            choice = input("Choose a difficulty: ")
-            attempts = 0 # Guesses
-            if choice == "1":
-                attempts = 10
-                difficulty = "Kindergarten"
-            elif choice == "2":
-                attempts = 7
-                difficulty = "Average Joe"
-            elif choice == "3":
-                attempts = 5
-                difficulty = "Hardcore Henry"
-            elif choice == "4":
-                attempts = 3
-                difficulty = "Ultraviolence"
-            return attempts, difficulty
-        except (TypeError, UnboundLocalError): 
-            print("Erhm, you can't do that, Billy.")
+def load_leaderboard():
+    if not os.path.exists(SCORES_FILE_PATH):
+        return []
+    with open(SCORES_FILE_PATH, 'r') as file:
+        scores = [line.strip() for line in file.readlines()]
+    return scores
 
-def enter_word():
-    word = input("What word do you want to add to the game? ").strip().lower()
-    with open(JSON_FILE_PATH, "r") as file:
-        words = json.load(file)
+def draw_text(screen, text, x, y, color=BLACK):
+    text_surface = FONT.render(text, True, color)
+    screen.blit(text_surface, (x, y))
 
-    if word not in words:
-        words.append(word)
-        with open(JSON_FILE_PATH, "w") as file:
-            json.dump(words, file, ensure_ascii=False, indent=4)
-        print("Word added successfully!")
-    else:
-        print("Word already exists in the list.")
+def draw_hangman(screen, attempts): # Draw hangman
+    base_x = 150
+    base_y = 400
+    if attempts <= 5:
+        pygame.draw.line(screen, BLACK, (base_x, base_y), (base_x, base_y - 150), 4)
+    if attempts <= 4:
+        pygame.draw.line(screen, BLACK, (base_x, base_y - 150), (base_x + 100, base_y - 150), 4)
+    if attempts <= 3:
+        pygame.draw.line(screen, BLACK, (base_x + 100, base_y - 150), (base_x + 100, base_y - 120), 4)
+    if attempts <= 2:
+        pygame.draw.circle(screen, BLACK, (base_x + 100, base_y - 100), 20, 4)
+    if attempts <= 1:
+        pygame.draw.line(screen, BLACK, (base_x + 100, base_y - 80), (base_x + 100, base_y - 30), 4)
+    if attempts == 0:
+        pygame.draw.line(screen, BLACK, (base_x + 100, base_y - 30), (base_x + 80, base_y), 4)
+        pygame.draw.line(screen, BLACK, (base_x + 100, base_y - 30), (base_x + 120, base_y), 4)
 
-def new_game():
+def get_player_name(screen): 
+    name = ""
+    running = True
+    while running:
+        screen.fill(WHITE)
+        draw_text(screen, "Enter your name:", 50, 50, RED)
+        draw_text(screen, name, 50, 100, BLACK)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN and name:
+                    running = False
+                elif event.key == pygame.K_BACKSPACE:
+                    name = name[:-1]
+                elif event.unicode.isalpha() or event.unicode == " ":
+                    name += event.unicode
+
+    return name.strip()
+
+def choose_difficulty(screen):
+    difficulties = {
+        "1": (10, "Kindergarten"),
+        "2": (7, "Average Joe"),
+        "3": (5, "Hardcore Henry"),
+        "4": (3, "Ultraviolence")
+    }
+    running = True
+    while running: # Choose difficulty
+        screen.fill(WHITE)
+        draw_text(screen, "Choose a difficulty:", 50, 50, RED)
+        draw_text(screen, "1. Kindergarten (10 attempts)", 50, 100)
+        draw_text(screen, "2. Average Joe (7 attempts)", 50, 150)
+        draw_text(screen, "3. Hardcore Henry (5 attempts)", 50, 200)
+        draw_text(screen, "4. Ultraviolence (3 attempts)", 50, 250)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.unicode in difficulties:
+                    return difficulties[event.unicode]
+
+def leaderboard_screen(screen):
+    leaderboard = load_leaderboard()
+    running = True
+    while running:
+        screen.fill(WHITE)
+        draw_text(screen, "Leaderboard:", 50, 50, RED)
+
+        for i, entry in enumerate(leaderboard):
+            draw_text(screen, entry, 50, 100 + i * 30)
+
+        draw_text(screen, "Press ESC to return to the menu.", 50, 500, BLACK)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+
+def victory_screen(screen):
+    if not os.path.exists(ASSETS_PATH):
+        print("Victory image not found! Please ensure win.png is in the assets folder.")
+        return
+
+    win_image = pygame.image.load(ASSETS_PATH)
+    win_image = pygame.transform.scale(win_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    screen.blit(win_image, (0, 0))
+    pygame.display.flip()
+    pygame.time.delay(3000)
+
+def game_loop():
     words = load_words()
-    rand_word = get_random_word(words)
-    if not rand_word:
+    if not words:
         print("No words available! Please add some words first.")
         return
 
-    underscore_rand_word = ["_"] * len(rand_word)
-    print("Randomly chosen word:", " ".join(underscore_rand_word))
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Hangman Game")
 
-    attempts, difficulty = choose_difficulty()
+    clock = pygame.time.Clock()
+
+    player_name = get_player_name(screen)
+    attempts, difficulty = choose_difficulty(screen)
+    rand_word = random.choice(words)
+    underscore_word = ["_"] * len(rand_word)
     guessed_letters = set()
 
-    while attempts > 0 and "_" in underscore_rand_word:
-        print(f"\nAttempts left: {attempts}")
-        letter = input("Enter a letter to guess: ").strip().lower()
-        if letter == rand_word:
-            print("WHAT A GUESS !!! CORRECT !!!")
-            play_sound("denis_ah.mp3")
-            scores_saves(player_name, attempts, difficulty)
-            return
+    running = True
+    while running:
+        screen.fill(WHITE)
+        draw_text(screen, f"Player: {player_name}", 50, 20, GREEN)
+        draw_text(screen, f"Difficulty: {difficulty}", 50, 60)
+        draw_text(screen, f"Attempts left: {attempts}", 50, 100)
+        draw_text(screen, "Word: " + " ".join(underscore_word), 50, 140)
+        draw_text(screen, "Guessed letters: " + ", ".join(sorted(guessed_letters)), 50, 180)
+        draw_hangman(screen, attempts)
 
-        elif len(letter) != 1:
-            print("This is not one letter!")
-        elif letter in guessed_letters:
-            print("You've already guessed this letter!")
-        else:
-            guessed_letters.add(letter)
-            if letter in rand_word or letter == rand_word:
-                print("Correct guess!")
-                for i, char in enumerate(rand_word):
-                    if char == letter:
-                        underscore_rand_word[i] = letter
-            else:
-                print("Wrong guess!")
-                attempts -= 1
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.unicode.isalpha():
+                    letter = event.unicode.lower()
+                    if letter in guessed_letters:
+                        continue
 
-            print("Current word:", " ".join(underscore_rand_word))
+                    guessed_letters.add(letter)
+                    if letter in rand_word:
+                        for i, char in enumerate(rand_word):
+                            if char == letter:
+                                underscore_word[i] = letter
+                    else:
+                        attempts -= 1
 
-    if "_" not in underscore_rand_word:
-        play_sound("denis_ah.mp3")
-        print("Congratulations! You guessed the word!")
-        scores_saves(player_name, attempts, difficulty)
-    else:
-        play_sound("motus_boule_noire.mp3")
-        hangman()
-        print(f"Out of attempts! The word was: {rand_word}")
-        print(f"The word you were looking for was: {rand_word}")
+        if "_" not in underscore_word:
+            victory_screen(screen)
+            save_score(player_name, attempts, difficulty)
+            running = False
 
-def play_sound(file_name):
-    try:
-        sound = pygame.mixer.Sound(file_name)
-        sound.play()
-    except pygame.error:
-        print("Sound could not be played:", file_name)
+        if attempts == 0:
+            draw_text(screen, f"You lost! The word was: {rand_word}", 50, 220, RED)
+            pygame.display.flip()
+            pygame.time.delay(2000)
+            running = False
 
-def scores_saves(player_name, points, difficulty):
-    with open("scores.txt", "a") as file:
-        file.write(f"{player_name} {points} {difficulty}\n")
-    print("Score saved !")
+        pygame.display.flip()
+        clock.tick(30)
 
-def leaderboards_menu():
-    print("1.Print Leaderboards")
-    print("2.Erase Leaderboards")
-    choice = input("Choose your option : ")
-    if choice == "1":
-        leaderboards()
-    elif choice == "2":
-        erase_leaderboards()
-    else:
-        print("I didn't understand your request.")
+    leaderboard_screen(screen)
 
-def leaderboards():
-    try:
-        with open("scores.txt", "r") as file:
-            content = file.read()
-            print(content if content else "No scores yet!")
-    except FileNotFoundError:
-        print("No leaderboard available yet.")
+def main_menu():
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Hangman Main Menu")
 
-def erase_leaderboards():
-    with open("scores.txt", "w") as file: 
-        pass
+    clock = pygame.time.Clock()
+    running = True
 
-def hangman():
-    print("  _______")
-    print("  |     |")
-    print("  |     O")
-    print("  |    /|\\")
-    print("  |    / \\")
-    print("__|__")
+    while running: # Main menu
+        screen.fill(WHITE)
+        draw_text(screen, "Main Menu", 50, 50, RED)
+        draw_text(screen, "1. Start Game", 50, 100)
+        draw_text(screen, "2. View Leaderboard", 50, 150)
+        draw_text(screen, "3. Quit", 50, 200)
+        pygame.display.flip()
 
-player_name = title()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.unicode == "1":
+                    game_loop()
+                if event.unicode == "2":
+                    leaderboard_screen(screen)
+                if event.unicode == "3":
+                    running = False
 
-while True:
-    try:
-        menu()
-    except KeyboardInterrupt:
-        print("\nQuitting the game... ")
-        break
+        clock.tick(30)
+
+main_menu()
+pygame.quit()
